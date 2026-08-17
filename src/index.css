@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   ELEVATING ICONS - Global Theme
+   Palette: Matte Black (#0D0D0D), Electric Yellow (#FFC300), White
+   Typography: Oswald (headlines) + Barlow (body)
+   ============================================================ */
+
+@layer base {
+  :root {
+    --background: 0 0% 5.1%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 6.7%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 6.7%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 45 100% 50%;
+    --primary-foreground: 0 0% 5.1%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 45 100% 50%;
+    --accent-foreground: 0 0% 5.1%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
+    --ring: 45 100% 50%;
+    --radius: 0.25rem;
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 45 100% 50%;
+    --sidebar-primary-foreground: 0 0% 5.1%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 14%;
+    --sidebar-ring: 45 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Barlow', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.02em;
+  }
+}
+
+@layer components {
+  /* Brand utility classes */
+  .btn-yellow {
+    background-color: #FFC300;
+    color: #0D0D0D;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.75rem 2rem;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+  }
+  .btn-yellow:hover {
+    background-color: transparent;
+    border-color: #FFC300;
+    color: #FFC300;
+  }
+
+  .btn-outline-yellow {
+    background-color: transparent;
+    color: #FFC300;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.75rem 2rem;
+    border: 2px solid #FFC300;
+    transition: all 0.2s ease;
+  }
+  .btn-outline-yellow:hover {
+    background-color: #FFC300;
+    color: #0D0D0D;
+  }
+
+  .card-glow {
+    transition: all 0.3s ease;
+  }
+  .card-glow:hover {
+    border-color: #FFC300;
+    box-shadow: 0 0 20px rgba(255, 195, 0, 0.2);
+    transform: translateY(-4px);
+  }
+}

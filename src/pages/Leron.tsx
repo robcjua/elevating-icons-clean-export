@@ -214,7 +214,7 @@ const INTAKES: Record<Intake, { interest: string; title: [string, string]; blurb
     typeLabel: "Booking type",
     types: ["Speaking engagement", "Show or event appearance", "Interview or podcast", "Panel or workshop", "Brand partnership", "Other"],
     submit: "Book Leron",
-    thanks: "Thanks. Leron's team will reach out to confirm the details.",
+    thanks: "Thanks! Our team will reach out to you.",
   },
   ei: {
     interest: "Hire Elevating Icons",
@@ -223,7 +223,7 @@ const INTAKES: Record<Intake, { interest: string; title: [string, string]; blurb
     typeLabel: "Service needed",
     types: ["Media Production Services", "Content Creation", "Documentary & Video Production", "Not sure yet"],
     submit: "Send request",
-    thanks: "Thanks. The Elevating Icons team will reach out to talk through your project.",
+    thanks: "Thanks! Our team will reach out to you.",
   },
 };
 

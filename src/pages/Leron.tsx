@@ -97,7 +97,7 @@ function EpisodePlayer({ src }: { src: string }) {
 // thumbnail filling the sides so there are no dead bars. The trailer starts
 // muted about two seconds after load (browsers only allow muted autoplay),
 // with a sound toggle. When it ends, it points people at the full episode.
-function Hero({ onPlayEpisode }: { onPlayEpisode: () => void }) {
+function Hero({ onPlayEpisode, hold }: { onPlayEpisode: () => void; hold: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [ended, setEnded] = useState(false);
@@ -136,6 +136,11 @@ function Hero({ onPlayEpisode }: { onPlayEpisode: () => void }) {
       events.forEach((ev) => window.removeEventListener(ev, unmuteOnFirstGesture));
     };
   }, []);
+
+  // pause the trailer whenever a popup (episode or intake form) is open
+  useEffect(() => {
+    if (hold) ref.current?.pause();
+  }, [hold]);
 
   function toggleSound() {
     const v = ref.current;
@@ -358,7 +363,7 @@ export default function Leron() {
             <p style={barlow} className="text-lg text-white/70 font-light">Featuring Leron Rogers</p>
           </div>
 
-          <Hero onPlayEpisode={() => setEpisodeOpen(true)} />
+          <Hero onPlayEpisode={() => setEpisodeOpen(true)} hold={episodeOpen || intake !== null} />
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <button

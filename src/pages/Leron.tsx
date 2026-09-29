@@ -14,7 +14,7 @@ const EPISODE_URL = "/media/leron/episode/index.m3u8";
 const LEGAL_DM_URL = "https://ig.me/m/leronrogers";
 const THUMBNAIL = "/media/leron/thumbnail.jpg";
 // INTAKE_URL: the Google Apps Script web app URL that writes to the bookings sheet.
-const INTAKE_URL = "";
+const INTAKE_URL = "https://script.google.com/macros/s/AKfycbygBpyt3iUuFs_My3pcYLi9arUpXflieozXaJZiKw5BscJEj9hcVlPfaGJ17RbqyLS8/exec";
 
 const oswald = { fontFamily: "'Oswald', sans-serif" };
 const barlow = { fontFamily: "'Barlow', sans-serif" };

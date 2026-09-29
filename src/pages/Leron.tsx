@@ -1,13 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CalendarCheck, Instagram, Play } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Instagram, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Episode: "Leron On The Go" with Leron Rogers.
 // TRAILER_URL / EPISODE_URL: YouTube or Vimeo links (preferred), or an mp4 path in /public.
-const TRAILER_URL = "";
+const TRAILER_URL = "/leron/trailer.mp4"; // 67s, 1080x1920, transcoded from Rob's 4K master
 // Full episode lives in Rob's Google Drive (shared: anyone with the link), played through Drive's embed player.
 const EPISODE_URL = "https://drive.google.com/file/d/1bXjPI3HxYWpcxe-f-95ajlDJ7tGJOqqo/view";
 // Legal representation inquiries go straight to Leron's Instagram DMs.
@@ -57,42 +57,79 @@ function Player({ url, title, emptyLabel, vertical }: { url: string; title: stri
   );
 }
 
-// Hero: the vertical thumbnail (or trailer, once it arrives) framed in a wide
-// box, with a blurred copy of the same image filling the sides so there are
-// no dead bars. Clicking plays the trailer inline, or opens the full episode
-// until the trailer exists.
+// Hero: the vertical trailer framed in a wide box, with a blurred copy of the
+// thumbnail filling the sides so there are no dead bars. The trailer starts
+// muted about two seconds after load (browsers only allow muted autoplay),
+// with a sound toggle. When it ends, it points people at the full episode.
 function Hero({ onPlayEpisode }: { onPlayEpisode: () => void }) {
-  const [playing, setPlaying] = useState(false);
-  const embed = TRAILER_URL ? embedUrl(TRAILER_URL) : null;
+  const ref = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+  const [ended, setEnded] = useState(false);
+
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    const t = window.setTimeout(() => { ref.current?.play().catch(() => undefined); }, 2000);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  function toggleSound() {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setMuted(v.muted);
+    if (v.paused) v.play().catch(() => undefined);
+  }
+
+  function replay() {
+    const v = ref.current;
+    if (!v) return;
+    setEnded(false);
+    v.currentTime = 0;
+    v.play().catch(() => undefined);
+  }
+
   return (
     <div className="relative w-full aspect-[9/16] sm:aspect-video overflow-hidden border border-[#222] bg-black">
       <img src={THUMBNAIL} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-50" />
       <div className="relative h-full flex justify-center">
-        {playing && TRAILER_URL ? (
-          embed ? (
-            <iframe src={embed + (embed.includes("?") ? "&" : "?") + "autoplay=1"} title="Leron On The Go trailer" className="h-full aspect-[9/16]" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
-          ) : (
-            <video src={TRAILER_URL} poster={THUMBNAIL} controls autoPlay playsInline className="h-full aspect-[9/16] object-cover" />
-          )
-        ) : (
-          <button
-            type="button"
-            onClick={() => (TRAILER_URL ? setPlaying(true) : onPlayEpisode())}
-            className="group relative h-full aspect-[9/16] max-w-full"
-            aria-label={TRAILER_URL ? "Play the trailer" : "Watch the full episode"}
-          >
-            <img src={THUMBNAIL} alt="Leron Rogers on Elevating Icons On The Go" className="h-full w-full object-cover" />
-            <span className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-            <span className="absolute inset-x-0 bottom-[12%] flex flex-col items-center gap-3">
-              <span className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-[#FFC300] text-black flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform">
-                <Play size={30} className="ml-1" fill="currentColor" />
-              </span>
-              <span style={oswald} className="uppercase tracking-widest text-sm text-white drop-shadow">
-                {TRAILER_URL ? "Watch the trailer" : "Watch the episode"}
-              </span>
-            </span>
-          </button>
-        )}
+        <div className="relative h-full aspect-[9/16] max-w-full isolate">
+          <video
+            ref={ref}
+            src={TRAILER_URL}
+            poster={THUMBNAIL}
+            muted
+            playsInline
+            preload="metadata"
+            onEnded={() => setEnded(true)}
+            onClick={toggleSound}
+            className="h-full w-full object-cover cursor-pointer"
+            aria-label="Leron On The Go trailer"
+          />
+          {!ended && (
+            <button
+              type="button"
+              onClick={toggleSound}
+              className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center"
+              aria-label={muted ? "Turn sound on" : "Turn sound off"}
+            >
+              {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            </button>
+          )}
+          {ended && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+              <img src={THUMBNAIL} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover -z-10" />
+              <span className="absolute inset-0 bg-black/55 -z-10" />
+              <span style={oswald} className="uppercase tracking-widest text-white text-lg">Want the whole story?</span>
+              <button type="button" onClick={onPlayEpisode} className="btn-yellow cta-episode text-sm px-6 py-3 inline-flex items-center gap-2" style={oswald}>
+                <Play size={16} fill="currentColor" /> Watch the full episode
+              </button>
+              <button type="button" onClick={replay} className="text-white/70 hover:text-white text-sm inline-flex items-center gap-1.5" style={barlow}>
+                <RotateCcw size={14} /> Replay trailer
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -241,13 +278,14 @@ export default function Leron() {
               className="btn-yellow text-sm px-6 py-3.5 inline-flex items-center justify-center gap-2"
               style={oswald}
             >
-              <CalendarCheck size={18} /> Do you want to book with Leron?
+              <CalendarCheck size={18} /> Book Leron for speaking engagements and more
             </button>
             <a href={LEGAL_DM_URL} target="_blank" rel="noopener noreferrer" className={outline} style={oswald}>
-              <Instagram size={16} /> Legal representation: DM Leron
+              <Instagram size={16} /> Need an entertainment lawyer? DM Leron
             </a>
-            <button type="button" onClick={() => setEpisodeOpen(true)} className={outline} style={oswald}>
-              <Play size={16} /> Watch the full episode
+            <button type="button" onClick={() => setEpisodeOpen(true)} className={`${outline} cta-episode`} style={oswald}>
+              <Play size={16} fill="currentColor" /> Watch the full episode
+              <span className="bg-[#FFC300] text-black text-[10px] font-bold px-1.5 py-0.5 tracking-wider">12 MIN</span>
             </button>
           </div>
         </div>
@@ -260,7 +298,7 @@ export default function Leron() {
               Book with <span className="text-[#FFC300]">Leron</span>
             </DialogTitle>
             <DialogDescription style={barlow} className="text-white/60 text-base">
-              Shows, events, interviews and speaking. For legal representation,{" "}
+              Speaking engagements, shows, events and interviews. Need an entertainment lawyer?{" "}
               <a href={LEGAL_DM_URL} target="_blank" rel="noopener noreferrer" className="text-[#FFC300] underline">
                 DM Leron on Instagram
               </a>

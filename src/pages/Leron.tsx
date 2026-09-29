@@ -242,7 +242,15 @@ function IntakeForm({ kind }: { kind: Intake }) {
     const data = new FormData(form);
     if (data.get("website")) return; // honeypot: bots fill hidden fields
     if (!INTAKE_URL) {
-      setState("error");
+      // Sheet endpoint not connected yet: hand the lead to email instead of
+      // dropping it (same pattern as the homepage contact form).
+      const lines = ["name", "email", "phone", "organization", "request_type", "preferred_date", "location", "budget", "message"]
+        .map((k) => `${k.replace(/_/g, " ")}: ${String(data.get(k) || "")}`)
+        .join("\n");
+      const subject = encodeURIComponent(`${cfg.interest}: ${String(data.get("name") || "")}`);
+      window.location.href = `mailto:business@elevatingicons.com?subject=${subject}&body=${encodeURIComponent(lines)}`;
+      setState("sent");
+      form.reset();
       return;
     }
     setState("sending");

@@ -97,7 +97,7 @@ export default function HeroSection() {
             to="/leron"
             className="lg:hidden mt-8 flex items-center gap-4 border border-[#FFC300]/60 bg-black/50 p-3 pr-4 hover:border-[#FFC300] transition-colors"
           >
-            <img src="/leron/thumbnail.jpg" alt="" className="w-14 aspect-[9/16] object-cover shrink-0" />
+            <img src="/media/leron/thumbnail.jpg" alt="" className="w-14 aspect-[9/16] object-cover shrink-0" />
             <span className="min-w-0">
               <span style={{ fontFamily: "'Oswald', sans-serif" }} className="block text-[11px] tracking-[0.25em] uppercase text-[#FFC300]">New episode</span>
               <span style={{ fontFamily: "'Oswald', sans-serif" }} className="block text-white uppercase text-lg leading-tight">Leron On The Go</span>
@@ -119,7 +119,7 @@ export default function HeroSection() {
           }}
         >
           <div className="relative aspect-[9/16] overflow-hidden border border-[#FFC300]/50 group-hover:border-[#FFC300] transition-colors shadow-2xl shadow-black/60">
-            <img src="/leron/thumbnail.jpg" alt="Leron Rogers on Elevating Icons On The Go" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+            <img src="/media/leron/thumbnail.jpg" alt="Leron Rogers on Elevating Icons On The Go" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
             <span style={{ fontFamily: "'Oswald', sans-serif" }} className="absolute top-3 left-3 bg-[#FFC300] text-black text-xs font-bold tracking-[0.2em] uppercase px-2.5 py-1">
               New episode

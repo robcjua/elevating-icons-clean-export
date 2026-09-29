@@ -7,12 +7,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 // Episode: "Leron On The Go" with Leron Rogers.
 // TRAILER_URL / EPISODE_URL: YouTube or Vimeo links (preferred), or an mp4 path in /public.
-const TRAILER_URL = "/leron/trailer.mp4"; // 67s, 1080x1920, transcoded from Rob's 4K master
+const TRAILER_URL = "/media/leron/trailer.mp4"; // 67s, 1080x1920, transcoded from Rob's 4K master
 // Full episode is hosted on this site as HLS chunks (public/leron/episode/), transcoded from Rob's 4K master.
-const EPISODE_URL = "/leron/episode/index.m3u8";
+const EPISODE_URL = "/media/leron/episode/index.m3u8";
 // Legal representation inquiries go straight to Leron's Instagram DMs.
 const LEGAL_DM_URL = "https://ig.me/m/leronrogers";
-const THUMBNAIL = "/leron/thumbnail.jpg";
+const THUMBNAIL = "/media/leron/thumbnail.jpg";
 // INTAKE_URL: the Google Apps Script web app URL that writes to the bookings sheet.
 const INTAKE_URL = "";
 

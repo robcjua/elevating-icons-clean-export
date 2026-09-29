@@ -26,6 +26,8 @@ jobs:
       - run: npm run build
       # SPA fallback: /services and any deep link 404s on Pages without this
       - run: cp dist/index.html dist/404.html
+      # Real entry files for each client-side route so GitHub Pages answers 200, not 404
+      - run: for r in leron services; do mkdir -p "dist/$r" && cp dist/index.html "dist/$r/index.html"; done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

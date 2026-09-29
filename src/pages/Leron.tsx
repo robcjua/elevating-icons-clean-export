@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CalendarCheck, Instagram, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Clapperboard, Instagram, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 // Episode: "Leron On The Go" with Leron Rogers.
 // TRAILER_URL / EPISODE_URL: YouTube or Vimeo links (preferred), or an mp4 path in /public.
 const TRAILER_URL = "/leron/trailer.mp4"; // 67s, 1080x1920, transcoded from Rob's 4K master
-// Full episode lives in Rob's Google Drive (shared: anyone with the link), played through Drive's embed player.
-const EPISODE_URL = "https://drive.google.com/file/d/1bXjPI3HxYWpcxe-f-95ajlDJ7tGJOqqo/view";
+// Full episode is hosted on this site as HLS chunks (public/leron/episode/), transcoded from Rob's 4K master.
+const EPISODE_URL = "/leron/episode/index.m3u8";
 // Legal representation inquiries go straight to Leron's Instagram DMs.
 const LEGAL_DM_URL = "https://ig.me/m/leronrogers";
 const THUMBNAIL = "/leron/thumbnail.jpg";
@@ -57,6 +57,42 @@ function Player({ url, title, emptyLabel, vertical }: { url: string; title: stri
   );
 }
 
+// Full-episode player. Safari plays HLS natively; everywhere else hls.js is
+// loaded on demand, so it never weighs down the page until someone hits play.
+function EpisodePlayer({ src }: { src: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    let hls: { destroy: () => void } | null = null;
+    let cancelled = false;
+    const start = () => video.play().catch(() => undefined);
+    if (!src.endsWith(".m3u8") || video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = src;
+      start();
+    } else {
+      import("hls.js").then(({ default: Hls }) => {
+        if (cancelled) return;
+        if (Hls.isSupported()) {
+          const h = new Hls({ capLevelToPlayerSize: true });
+          h.loadSource(src);
+          h.attachMedia(video);
+          h.on(Hls.Events.MANIFEST_PARSED, start);
+          hls = h;
+        } else {
+          video.src = src;
+        }
+      });
+    }
+    return () => { cancelled = true; hls?.destroy(); };
+  }, [src]);
+  return (
+    <div className="aspect-[9/16] max-h-[75vh] mx-auto bg-black border border-[#222] overflow-hidden">
+      <video ref={ref} poster={THUMBNAIL} controls playsInline className="w-full h-full object-contain" aria-label="Leron On The Go full episode" />
+    </div>
+  );
+}
+
 // Hero: the vertical trailer framed in a wide box, with a blurred copy of the
 // thumbnail filling the sides so there are no dead bars. The trailer starts
 // muted about two seconds after load (browsers only allow muted autoplay),
@@ -69,8 +105,36 @@ function Hero({ onPlayEpisode }: { onPlayEpisode: () => void }) {
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
-    const t = window.setTimeout(() => { ref.current?.play().catch(() => undefined); }, 2000);
-    return () => window.clearTimeout(t);
+    // Try to start WITH sound. Browsers block that for most first-time visitors,
+    // so fall back to muted playback and unmute on the visitor's first tap,
+    // click or key press anywhere on the page.
+    const t = window.setTimeout(() => {
+      const v = ref.current;
+      if (!v) return;
+      v.muted = false;
+      v.play()
+        .then(() => setMuted(false))
+        .catch(() => {
+          v.muted = true;
+          setMuted(true);
+          v.play().catch(() => undefined);
+        });
+    }, 2000);
+    const unmuteOnFirstGesture = (e: Event) => {
+      const v = ref.current;
+      if (!v || !v.muted) return;
+      // the sound button handles its own clicks
+      if (e.target instanceof Element && e.target.closest("[data-sound-toggle]")) return;
+      v.muted = false;
+      setMuted(false);
+      if (v.paused && !v.ended) v.play().catch(() => undefined);
+    };
+    const events = ["pointerdown", "keydown", "touchstart"] as const;
+    events.forEach((ev) => window.addEventListener(ev, unmuteOnFirstGesture, { once: true, passive: true }));
+    return () => {
+      window.clearTimeout(t);
+      events.forEach((ev) => window.removeEventListener(ev, unmuteOnFirstGesture));
+    };
   }, []);
 
   function toggleSound() {
@@ -109,11 +173,12 @@ function Hero({ onPlayEpisode }: { onPlayEpisode: () => void }) {
           {!ended && (
             <button
               type="button"
+              data-sound-toggle
               onClick={toggleSound}
-              className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center"
+              className={`absolute top-3 right-3 h-10 rounded-full text-white flex items-center justify-center gap-2 transition-all ${muted ? "px-4 bg-[#FFC300] text-black animate-pulse" : "w-10 bg-black/60 hover:bg-black/80"}`}
               aria-label={muted ? "Turn sound on" : "Turn sound off"}
             >
-              {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              {muted ? <><VolumeX size={18} /><span style={oswald} className="text-xs font-bold uppercase tracking-wider">Tap for sound</span></> : <Volume2 size={18} />}
             </button>
           )}
           {ended && (
@@ -135,10 +200,35 @@ function Hero({ onPlayEpisode }: { onPlayEpisode: () => void }) {
   );
 }
 
+// Two intake flows share one form and one Google Sheet. The hidden "interest"
+// field records which button the visitor came from, so Rob can sort leads.
+type Intake = "leron" | "ei";
+const INTAKES: Record<Intake, { interest: string; title: [string, string]; blurb: string; typeLabel: string; types: string[]; submit: string; thanks: string }> = {
+  leron: {
+    interest: "Book Leron (speaking and more)",
+    title: ["Book", "Leron"],
+    blurb: "Speaking engagements, shows, events and interviews.",
+    typeLabel: "Booking type",
+    types: ["Speaking engagement", "Show or event appearance", "Interview or podcast", "Panel or workshop", "Brand partnership", "Other"],
+    submit: "Book Leron",
+    thanks: "Thanks. Leron's team will reach out to confirm the details.",
+  },
+  ei: {
+    interest: "Hire Elevating Icons",
+    title: ["Hire", "Elevating Icons"],
+    blurb: "Media production, content creation, and documentary work for artists, athletes, executives and brands.",
+    typeLabel: "Service needed",
+    types: ["Media Production Services", "Content Creation", "Documentary & Video Production", "Not sure yet"],
+    submit: "Send request",
+    thanks: "Thanks. The Elevating Icons team will reach out to talk through your project.",
+  },
+};
+
 const inputCls =
   "w-full bg-[#0D0D0D] border border-[#2a2a2a] focus:border-[#FFC300] outline-none px-4 py-3 text-white placeholder:text-white/30 transition-colors";
 
-function BookingForm() {
+function IntakeForm({ kind }: { kind: Intake }) {
+  const cfg = INTAKES[kind];
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -169,7 +259,7 @@ function BookingForm() {
       <div className="bg-[#141414] border border-[#FFC300]/40 p-8 text-center">
         <CalendarCheck size={36} className="text-[#FFC300] mx-auto mb-4" />
         <h3 style={oswald} className="text-2xl font-bold uppercase text-white mb-2">Request received</h3>
-        <p style={barlow} className="text-white/70">Thanks. Leron's team will reach out to confirm the details.</p>
+        <p style={barlow} className="text-white/70">{cfg.thanks}</p>
       </div>
     );
   }
@@ -177,6 +267,7 @@ function BookingForm() {
   return (
     <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2" style={barlow}>
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
+      <input type="hidden" name="interest" value={cfg.interest} />
       <label className="grid gap-1.5">
         <span className="text-sm text-white/70">Name *</span>
         <input name="name" required className={inputCls} placeholder="Your full name" />
@@ -194,15 +285,10 @@ function BookingForm() {
         <input name="organization" className={inputCls} />
       </label>
       <label className="grid gap-1.5">
-        <span className="text-sm text-white/70">Booking type *</span>
-        <select name="booking_type" required className={inputCls} defaultValue="">
+        <span className="text-sm text-white/70">{cfg.typeLabel} *</span>
+        <select name="request_type" required className={inputCls} defaultValue="">
           <option value="" disabled>Choose one</option>
-          <option>Show or event appearance</option>
-          <option>Interview or podcast</option>
-          <option>Speaking engagement</option>
-          <option>Panel or workshop</option>
-          <option>Brand partnership</option>
-          <option>Other</option>
+          {cfg.types.map((t) => <option key={t}>{t}</option>)}
         </select>
       </label>
       <label className="grid gap-1.5">
@@ -218,12 +304,12 @@ function BookingForm() {
         <input name="budget" className={inputCls} placeholder="Optional" />
       </label>
       <label className="grid gap-1.5 md:col-span-2">
-        <span className="text-sm text-white/70">Tell us about the booking *</span>
+        <span className="text-sm text-white/70">{kind === "leron" ? "Tell us about the booking" : "Tell us about the project"} *</span>
         <textarea name="message" required rows={5} className={inputCls} />
       </label>
       <div className="md:col-span-2 flex flex-col sm:flex-row sm:items-center gap-4">
         <button type="submit" disabled={state === "sending"} className="btn-yellow text-sm px-8 py-3 disabled:opacity-60" style={oswald}>
-          {state === "sending" ? "Sending..." : "Book with Leron"}
+          {state === "sending" ? "Sending..." : cfg.submit}
         </button>
         {state === "error" && (
           <span className="text-sm text-red-400">
@@ -237,10 +323,13 @@ function BookingForm() {
 }
 
 export default function Leron() {
-  const [bookOpen, setBookOpen] = useState(() => typeof window !== "undefined" && window.location.hash === "#book");
+  const [intake, setIntake] = useState<Intake | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.location.hash === "#book" ? "leron" : window.location.hash === "#hire" ? "ei" : null;
+  });
   const [episodeOpen, setEpisodeOpen] = useState(false);
   const outline =
-    "text-sm px-6 py-3.5 inline-flex items-center justify-center gap-2 border border-[#FFC300] text-[#FFC300] hover:bg-[#FFC300] hover:text-black transition-colors uppercase tracking-wider";
+    "text-sm px-5 py-4 min-h-[96px] flex flex-col items-center justify-center gap-2 text-center leading-snug border border-[#FFC300] text-[#FFC300] hover:bg-[#FFC300] hover:text-black transition-colors uppercase tracking-wider";
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden">
@@ -271,41 +360,59 @@ export default function Leron() {
 
           <Hero onPlayEpisode={() => setEpisodeOpen(true)} />
 
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <button
               type="button"
-              onClick={() => setBookOpen(true)}
-              className="btn-yellow text-sm px-6 py-3.5 inline-flex items-center justify-center gap-2"
+              onClick={() => setIntake("leron")}
+              className="btn-yellow text-sm px-5 py-4 min-h-[96px] flex flex-col items-center justify-center gap-2 text-center leading-snug"
               style={oswald}
             >
-              <CalendarCheck size={18} /> Book Leron for speaking engagements and more
+              <CalendarCheck size={20} className="shrink-0" />
+              <span>Book Leron for speaking engagements and more</span>
             </button>
             <a href={LEGAL_DM_URL} target="_blank" rel="noopener noreferrer" className={outline} style={oswald}>
-              <Instagram size={16} /> Need an entertainment lawyer? DM Leron
+              <Instagram size={20} className="shrink-0" />
+              <span>Need an entertainment lawyer? DM Leron</span>
             </a>
+            <button type="button" onClick={() => setIntake("ei")} className={outline} style={oswald}>
+              <Clapperboard size={20} className="shrink-0" />
+              <span>Hire Elevating Icons</span>
+            </button>
             <button type="button" onClick={() => setEpisodeOpen(true)} className={`${outline} cta-episode`} style={oswald}>
-              <Play size={16} fill="currentColor" /> Watch the full episode
-              <span className="bg-[#FFC300] text-black text-[10px] font-bold px-1.5 py-0.5 tracking-wider">12 MIN</span>
+              <Play size={20} fill="currentColor" className="shrink-0" />
+              <span className="inline-flex items-center gap-2">
+                Watch the full episode
+                <span className="bg-[#FFC300] text-black text-[10px] font-bold px-1.5 py-0.5 tracking-wider">12 MIN</span>
+              </span>
             </button>
           </div>
         </div>
       </main>
 
-      <Dialog open={bookOpen} onOpenChange={setBookOpen}>
+      <Dialog open={intake !== null} onOpenChange={(o) => { if (!o) setIntake(null); }}>
         <DialogContent className="max-w-3xl w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto bg-[#0D0D0D] border-[#222] rounded-none p-6 md:p-8 text-white">
-          <DialogHeader className="text-left space-y-2">
-            <DialogTitle style={oswald} className="text-3xl md:text-4xl font-bold uppercase text-white">
-              Book with <span className="text-[#FFC300]">Leron</span>
-            </DialogTitle>
-            <DialogDescription style={barlow} className="text-white/60 text-base">
-              Speaking engagements, shows, events and interviews. Need an entertainment lawyer?{" "}
-              <a href={LEGAL_DM_URL} target="_blank" rel="noopener noreferrer" className="text-[#FFC300] underline">
-                DM Leron on Instagram
-              </a>
-              .
-            </DialogDescription>
-          </DialogHeader>
-          <BookingForm />
+          {intake && (
+            <>
+              <DialogHeader className="text-left space-y-2">
+                <DialogTitle style={oswald} className="text-3xl md:text-4xl font-bold uppercase text-white">
+                  {INTAKES[intake].title[0]} <span className="text-[#FFC300]">{INTAKES[intake].title[1]}</span>
+                </DialogTitle>
+                <DialogDescription style={barlow} className="text-white/60 text-base">
+                  {INTAKES[intake].blurb}
+                  {intake === "leron" && (
+                    <>
+                      {" "}Need an entertainment lawyer?{" "}
+                      <a href={LEGAL_DM_URL} target="_blank" rel="noopener noreferrer" className="text-[#FFC300] underline">
+                        DM Leron on Instagram
+                      </a>
+                      .
+                    </>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              <IntakeForm key={intake} kind={intake} />
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -317,7 +424,7 @@ export default function Leron() {
             </DialogTitle>
             <DialogDescription className="sr-only">Full episode</DialogDescription>
           </DialogHeader>
-          {episodeOpen && <Player url={EPISODE_URL} title="Leron On The Go full episode" emptyLabel="Full episode coming soon" vertical />}
+          {episodeOpen && <EpisodePlayer src={EPISODE_URL} />}
         </DialogContent>
       </Dialog>
 

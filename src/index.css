@@ -99,3 +99,14 @@
     transform: translateY(-4px);
   }
 }
+
+/* Leron On The Go: pull attention to the full-episode CTA (pulse ring + shine sweep) */
+@keyframes ei-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 195, 0, 0.55); } 50% { box-shadow: 0 0 0 10px rgba(255, 195, 0, 0); } }
+@keyframes ei-shine { 0% { transform: translateX(-150%) skewX(-20deg); } 55%, 100% { transform: translateX(350%) skewX(-20deg); } }
+.cta-episode { position: relative; overflow: hidden; animation: ei-pulse 2.2s ease-out infinite; isolation: isolate; }
+.cta-episode::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; pointer-events: none; z-index: -1;
+  background: linear-gradient(90deg, transparent, rgba(255, 195, 0, 0.35), transparent);
+  animation: ei-shine 3.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .cta-episode, .cta-episode::after { animation: none; } }

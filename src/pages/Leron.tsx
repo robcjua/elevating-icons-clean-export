@@ -117,7 +117,7 @@ function Hero({ onPlayEpisode }: { onPlayEpisode: () => void }) {
             </button>
           )}
           {ended && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+            <div className="absolute inset-0 z-10 isolate flex flex-col items-center justify-center gap-4 p-6 text-center">
               <img src={THUMBNAIL} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover -z-10" />
               <span className="absolute inset-0 bg-black/55 -z-10" />
               <span style={oswald} className="uppercase tracking-widest text-white text-lg">Want the whole story?</span>

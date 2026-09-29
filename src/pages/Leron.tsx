@@ -12,6 +12,7 @@ const TRAILER_URL = "";
 const EPISODE_URL = "https://drive.google.com/file/d/1bXjPI3HxYWpcxe-f-95ajlDJ7tGJOqqo/view";
 // Legal representation inquiries go straight to Leron's Instagram DMs.
 const LEGAL_DM_URL = "https://ig.me/m/leronrogers";
+const THUMBNAIL = "/leron/thumbnail.jpg";
 // INTAKE_URL: the Google Apps Script web app URL that writes to the bookings sheet.
 const INTAKE_URL = "";
 
@@ -52,6 +53,47 @@ function Player({ url, title, emptyLabel, vertical }: { url: string; title: stri
       ) : (
         <video src={url} controls playsInline className="w-full h-full object-cover" />
       )}
+    </div>
+  );
+}
+
+// Hero: the vertical thumbnail (or trailer, once it arrives) framed in a wide
+// box, with a blurred copy of the same image filling the sides so there are
+// no dead bars. Clicking plays the trailer inline, or opens the full episode
+// until the trailer exists.
+function Hero({ onPlayEpisode }: { onPlayEpisode: () => void }) {
+  const [playing, setPlaying] = useState(false);
+  const embed = TRAILER_URL ? embedUrl(TRAILER_URL) : null;
+  return (
+    <div className="relative w-full aspect-[9/16] sm:aspect-video overflow-hidden border border-[#222] bg-black">
+      <img src={THUMBNAIL} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-50" />
+      <div className="relative h-full flex justify-center">
+        {playing && TRAILER_URL ? (
+          embed ? (
+            <iframe src={embed + (embed.includes("?") ? "&" : "?") + "autoplay=1"} title="Leron On The Go trailer" className="h-full aspect-[9/16]" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+          ) : (
+            <video src={TRAILER_URL} poster={THUMBNAIL} controls autoPlay playsInline className="h-full aspect-[9/16] object-cover" />
+          )
+        ) : (
+          <button
+            type="button"
+            onClick={() => (TRAILER_URL ? setPlaying(true) : onPlayEpisode())}
+            className="group relative h-full aspect-[9/16] max-w-full"
+            aria-label={TRAILER_URL ? "Play the trailer" : "Watch the full episode"}
+          >
+            <img src={THUMBNAIL} alt="Leron Rogers on Elevating Icons On The Go" className="h-full w-full object-cover" />
+            <span className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+            <span className="absolute inset-x-0 bottom-[12%] flex flex-col items-center gap-3">
+              <span className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-[#FFC300] text-black flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform">
+                <Play size={30} className="ml-1" fill="currentColor" />
+              </span>
+              <span style={oswald} className="uppercase tracking-widest text-sm text-white drop-shadow">
+                {TRAILER_URL ? "Watch the trailer" : "Watch the episode"}
+              </span>
+            </span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -190,7 +232,7 @@ export default function Leron() {
             <p style={barlow} className="text-lg text-white/70 font-light">Featuring Leron Rogers</p>
           </div>
 
-          <Player url={TRAILER_URL} title="Leron On The Go trailer" emptyLabel="Trailer coming soon" />
+          <Hero onPlayEpisode={() => setEpisodeOpen(true)} />
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             <button

@@ -399,15 +399,6 @@ export default function Leron() {
                 </DialogTitle>
                 <DialogDescription style={barlow} className="text-white/60 text-base">
                   {INTAKES[intake].blurb}
-                  {intake === "leron" && (
-                    <>
-                      {" "}Need an entertainment lawyer?{" "}
-                      <a href={LEGAL_DM_URL} target="_blank" rel="noopener noreferrer" className="text-[#FFC300] underline">
-                        DM Leron on Instagram
-                      </a>
-                      .
-                    </>
-                  )}
                 </DialogDescription>
               </DialogHeader>
               <IntakeForm key={intake} kind={intake} />

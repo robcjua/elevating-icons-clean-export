@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 // Episode: "Leron On The Go" with Leron Rogers.
 // TRAILER_URL / EPISODE_URL: YouTube or Vimeo links (preferred), or an mp4 path in /public.
 const TRAILER_URL = "";
-const EPISODE_URL = ""; // full episode; the section hides while this is empty
+// Full episode lives in Rob's Google Drive (shared: anyone with the link), played through Drive's embed player.
+const EPISODE_URL = "https://drive.google.com/file/d/1bXjPI3HxYWpcxe-f-95ajlDJ7tGJOqqo/view";
 // Legal representation inquiries go straight to Leron's Instagram DMs.
 const LEGAL_DM_URL = "https://ig.me/m/leronrogers";
 // INTAKE_URL: the Google Apps Script web app URL that writes to the bookings sheet.
@@ -20,15 +21,18 @@ const barlow = { fontFamily: "'Barlow', sans-serif" };
 function embedUrl(url: string): string | null {
   const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/);
   if (yt) return `https://www.youtube.com/embed/${yt[1]}?rel=0`;
+  const drive = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (drive) return `https://drive.google.com/file/d/${drive[1]}/preview`;
   const vimeo = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
   return null;
 }
 
-function Player({ url, title, emptyLabel }: { url: string; title: string; emptyLabel: string }) {
+function Player({ url, title, emptyLabel, vertical }: { url: string; title: string; emptyLabel: string; vertical?: boolean }) {
+  const box = vertical ? "aspect-[9/16] max-h-[75vh] mx-auto" : "aspect-video w-full";
   if (!url) {
     return (
-      <div className="aspect-video w-full bg-[#141414] border border-[#222] flex flex-col items-center justify-center gap-3 text-white/50">
+      <div className={`${box} bg-[#141414] border border-[#222] flex flex-col items-center justify-center gap-3 text-white/50`}>
         <Play size={40} className="text-[#FFC300]" />
         <span style={oswald} className="uppercase tracking-widest text-sm">{emptyLabel}</span>
       </div>
@@ -36,7 +40,7 @@ function Player({ url, title, emptyLabel }: { url: string; title: string; emptyL
   }
   const embed = embedUrl(url);
   return (
-    <div className="aspect-video w-full bg-black border border-[#222] overflow-hidden">
+    <div className={`${box} bg-black border border-[#222] overflow-hidden`}>
       {embed ? (
         <iframe
           src={embed}
@@ -226,14 +230,14 @@ export default function Leron() {
       </Dialog>
 
       <Dialog open={episodeOpen} onOpenChange={setEpisodeOpen}>
-        <DialogContent className="max-w-5xl w-[calc(100%-2rem)] bg-[#0D0D0D] border-[#222] rounded-none p-4 md:p-6 text-white">
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] bg-[#0D0D0D] border-[#222] rounded-none p-4 md:p-6 text-white">
           <DialogHeader className="text-left">
             <DialogTitle style={oswald} className="text-2xl md:text-3xl font-bold uppercase text-white">
               Leron <span className="text-[#FFC300]">On The Go</span>
             </DialogTitle>
             <DialogDescription className="sr-only">Full episode</DialogDescription>
           </DialogHeader>
-          {episodeOpen && <Player url={EPISODE_URL} title="Leron On The Go full episode" emptyLabel="Full episode coming soon" />}
+          {episodeOpen && <Player url={EPISODE_URL} title="Leron On The Go full episode" emptyLabel="Full episode coming soon" vertical />}
         </DialogContent>
       </Dialog>
 

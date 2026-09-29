@@ -1,14 +1,16 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CalendarCheck, ExternalLink, Play } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Instagram, Play } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-// Fill these three in when the media and links arrive.
-// TRAILER_URL: a YouTube or Vimeo link (preferred), or a path to an mp4 in /public.
+// Episode: "Leron On The Go" with Leron Rogers.
+// TRAILER_URL / EPISODE_URL: YouTube or Vimeo links (preferred), or an mp4 path in /public.
 const TRAILER_URL = "";
-// ON_THE_GO_URL: Leron's On The Go website. The button hides while this is empty.
-const ON_THE_GO_URL = "";
+const EPISODE_URL = ""; // full episode; the section hides while this is empty
+// Legal representation inquiries go straight to Leron's Instagram DMs.
+const LEGAL_DM_URL = "https://ig.me/m/leronrogers";
 // INTAKE_URL: the Google Apps Script web app URL that writes to the bookings sheet.
 const INTAKE_URL = "";
 
@@ -23,28 +25,28 @@ function embedUrl(url: string): string | null {
   return null;
 }
 
-function Trailer() {
-  if (!TRAILER_URL) {
+function Player({ url, title, emptyLabel }: { url: string; title: string; emptyLabel: string }) {
+  if (!url) {
     return (
       <div className="aspect-video w-full bg-[#141414] border border-[#222] flex flex-col items-center justify-center gap-3 text-white/50">
         <Play size={40} className="text-[#FFC300]" />
-        <span style={oswald} className="uppercase tracking-widest text-sm">Trailer coming soon</span>
+        <span style={oswald} className="uppercase tracking-widest text-sm">{emptyLabel}</span>
       </div>
     );
   }
-  const embed = embedUrl(TRAILER_URL);
+  const embed = embedUrl(url);
   return (
     <div className="aspect-video w-full bg-black border border-[#222] overflow-hidden">
       {embed ? (
         <iframe
           src={embed}
-          title="Leron trailer"
+          title={title}
           className="w-full h-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
         />
       ) : (
-        <video src={TRAILER_URL} controls playsInline className="w-full h-full object-cover" />
+        <video src={url} controls playsInline className="w-full h-full object-cover" />
       )}
     </div>
   );
@@ -90,7 +92,7 @@ function BookingForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="bg-[#141414] border border-[#222] p-6 md:p-8 grid gap-4 md:grid-cols-2" style={barlow}>
+    <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2" style={barlow}>
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       <label className="grid gap-1.5">
         <span className="text-sm text-white/70">Name *</span>
@@ -115,6 +117,7 @@ function BookingForm() {
           <option>Show or event appearance</option>
           <option>Interview or podcast</option>
           <option>Speaking engagement</option>
+          <option>Panel or workshop</option>
           <option>Brand partnership</option>
           <option>Other</option>
         </select>
@@ -151,6 +154,11 @@ function BookingForm() {
 }
 
 export default function Leron() {
+  const [bookOpen, setBookOpen] = useState(() => typeof window !== "undefined" && window.location.hash === "#book");
+  const [episodeOpen, setEpisodeOpen] = useState(false);
+  const outline =
+    "text-sm px-6 py-3.5 inline-flex items-center justify-center gap-2 border border-[#FFC300] text-[#FFC300] hover:bg-[#FFC300] hover:text-black transition-colors uppercase tracking-wider";
+
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden">
       <Navbar />
@@ -169,47 +177,65 @@ export default function Leron() {
             <div className="flex items-center gap-3 mb-6">
               <div className="h-0.5 w-12 bg-[#FFC300]" />
               <span style={oswald} className="text-sm font-medium tracking-[0.3em] uppercase text-[#FFC300]">
-                On The Go
+                Elevating Icons Presents
               </span>
             </div>
-            <h1 style={oswald} className="text-5xl md:text-7xl font-bold uppercase leading-none text-white mb-6">
-              Leron
+            <h1 style={oswald} className="text-5xl md:text-7xl font-bold uppercase leading-none text-white mb-4">
+              Leron <span className="text-[#FFC300]">On The Go</span>
             </h1>
+            <p style={barlow} className="text-lg text-white/70 font-light">Featuring Leron Rogers</p>
           </div>
 
-          <Trailer />
+          <Player url={TRAILER_URL} title="Leron On The Go trailer" emptyLabel="Trailer coming soon" />
 
-          <div className="mt-10 flex flex-col sm:flex-row gap-4">
-            <a href="#book" className="btn-yellow text-sm px-8 py-3 inline-flex items-center justify-center gap-2" style={oswald}>
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => setBookOpen(true)}
+              className="btn-yellow text-sm px-6 py-3.5 inline-flex items-center justify-center gap-2"
+              style={oswald}
+            >
               <CalendarCheck size={18} /> Do you want to book with Leron?
+            </button>
+            <a href={LEGAL_DM_URL} target="_blank" rel="noopener noreferrer" className={outline} style={oswald}>
+              <Instagram size={16} /> Legal representation: DM Leron
             </a>
-            {ON_THE_GO_URL && (
-              <a
-                href={ON_THE_GO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm px-8 py-3 inline-flex items-center justify-center gap-2 border border-[#FFC300] text-[#FFC300] hover:bg-[#FFC300] hover:text-black transition-colors uppercase tracking-wider"
-                style={oswald}
-              >
-                Visit On The Go <ExternalLink size={16} />
-              </a>
-            )}
+            <button type="button" onClick={() => setEpisodeOpen(true)} className={outline} style={oswald}>
+              <Play size={16} /> Watch the full episode
+            </button>
           </div>
-
-          <section id="book" className="mt-20 scroll-mt-28">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-0.5 w-12 bg-[#FFC300]" />
-              <span style={oswald} className="text-sm font-medium tracking-[0.3em] uppercase text-[#FFC300]">
-                Booking
-              </span>
-            </div>
-            <h2 style={oswald} className="text-3xl md:text-5xl font-bold uppercase text-white mb-8">
-              Book with <span className="text-[#FFC300]">Leron</span>
-            </h2>
-            <BookingForm />
-          </section>
         </div>
       </main>
+
+      <Dialog open={bookOpen} onOpenChange={setBookOpen}>
+        <DialogContent className="max-w-3xl w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto bg-[#0D0D0D] border-[#222] rounded-none p-6 md:p-8 text-white">
+          <DialogHeader className="text-left space-y-2">
+            <DialogTitle style={oswald} className="text-3xl md:text-4xl font-bold uppercase text-white">
+              Book with <span className="text-[#FFC300]">Leron</span>
+            </DialogTitle>
+            <DialogDescription style={barlow} className="text-white/60 text-base">
+              Shows, events, interviews and speaking. For legal representation,{" "}
+              <a href={LEGAL_DM_URL} target="_blank" rel="noopener noreferrer" className="text-[#FFC300] underline">
+                DM Leron on Instagram
+              </a>
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <BookingForm />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={episodeOpen} onOpenChange={setEpisodeOpen}>
+        <DialogContent className="max-w-5xl w-[calc(100%-2rem)] bg-[#0D0D0D] border-[#222] rounded-none p-4 md:p-6 text-white">
+          <DialogHeader className="text-left">
+            <DialogTitle style={oswald} className="text-2xl md:text-3xl font-bold uppercase text-white">
+              Leron <span className="text-[#FFC300]">On The Go</span>
+            </DialogTitle>
+            <DialogDescription className="sr-only">Full episode</DialogDescription>
+          </DialogHeader>
+          {episodeOpen && <Player url={EPISODE_URL} title="Leron On The Go full episode" emptyLabel="Full episode coming soon" />}
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>

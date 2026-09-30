@@ -5,9 +5,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-// Episode: "Leron On The Go" with Leron Rogers.
-// TRAILER_URL / EPISODE_URL: YouTube or Vimeo links (preferred), or an mp4 path in /public.
-const TRAILER_URL = "/media/leron/trailer.mp4"; // 67s, 1080x1920, transcoded from Rob's 4K master
+// Episode: "Elevating Icons On The Go" featuring Leron Rogers.
+// The page leads with the full episode (Rob 2026-09-30: people already saw the trailer on Instagram).
 // Full episode is hosted on this site as HLS chunks (public/leron/episode/), transcoded from Rob's 4K master.
 const EPISODE_URL = "/media/leron/episode/index.m3u8";
 // Legal representation inquiries go straight to Leron's Instagram DMs.
@@ -55,50 +54,40 @@ function Player({ url, title, emptyLabel, vertical }: { url: string; title: stri
   );
 }
 
-// Full-episode player. Safari plays HLS natively; everywhere else hls.js is
-// loaded on demand, so it never weighs down the page until someone hits play.
-function EpisodePlayer({ src }: { src: string }) {
+// Hero: the full vertical episode framed in a wide box, with a blurred copy of
+// the thumbnail filling the sides so there are no dead bars. Visitors already
+// saw the trailer on Instagram, so the page opens straight on the episode.
+// It starts about two seconds after load, with sound if the browser allows it,
+// otherwise muted with a tap-for-sound toggle. Safari plays HLS natively;
+// everywhere else hls.js is loaded on demand.
+function Hero({ hold }: { hold: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+  const [ended, setEnded] = useState(false);
+  const [controls, setControls] = useState(false);
+
   useEffect(() => {
     const video = ref.current;
     if (!video) return;
     let hls: { destroy: () => void } | null = null;
     let cancelled = false;
-    const start = () => video.play().catch(() => undefined);
-    if (!src.endsWith(".m3u8") || video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = src;
-      start();
+    if (!EPISODE_URL.endsWith(".m3u8") || video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = EPISODE_URL;
     } else {
       import("hls.js").then(({ default: Hls }) => {
         if (cancelled) return;
         if (Hls.isSupported()) {
           const h = new Hls({ capLevelToPlayerSize: true });
-          h.loadSource(src);
+          h.loadSource(EPISODE_URL);
           h.attachMedia(video);
-          h.on(Hls.Events.MANIFEST_PARSED, start);
           hls = h;
         } else {
-          video.src = src;
+          video.src = EPISODE_URL;
         }
       });
     }
     return () => { cancelled = true; hls?.destroy(); };
-  }, [src]);
-  return (
-    <div className="aspect-[9/16] max-h-[75vh] mx-auto bg-black border border-[#222] overflow-hidden">
-      <video ref={ref} poster={THUMBNAIL} controls playsInline className="w-full h-full object-contain" aria-label="Leron On The Go full episode" />
-    </div>
-  );
-}
-
-// Hero: the vertical trailer framed in a wide box, with a blurred copy of the
-// thumbnail filling the sides so there are no dead bars. The trailer starts
-// muted about two seconds after load (browsers only allow muted autoplay),
-// with a sound toggle. When it ends, it points people at the full episode.
-function Hero({ onPlayEpisode, hold }: { onPlayEpisode: () => void; hold: boolean }) {
-  const ref = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
-  const [ended, setEnded] = useState(false);
+  }, []);
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -111,7 +100,7 @@ function Hero({ onPlayEpisode, hold }: { onPlayEpisode: () => void; hold: boolea
       if (!v) return;
       v.muted = false;
       v.play()
-        .then(() => setMuted(false))
+        .then(() => { setMuted(false); setControls(true); })
         .catch(() => {
           v.muted = true;
           setMuted(true);
@@ -125,6 +114,7 @@ function Hero({ onPlayEpisode, hold }: { onPlayEpisode: () => void; hold: boolea
       if (e.target instanceof Element && e.target.closest("[data-sound-toggle]")) return;
       v.muted = false;
       setMuted(false);
+      setControls(true);
       if (v.paused && !v.ended) v.play().catch(() => undefined);
     };
     const events = ["pointerdown", "keydown", "touchstart"] as const;
@@ -135,7 +125,7 @@ function Hero({ onPlayEpisode, hold }: { onPlayEpisode: () => void; hold: boolea
     };
   }, []);
 
-  // pause the trailer whenever a popup (episode or intake form) is open
+  // pause the episode whenever a popup (episode or intake form) is open
   useEffect(() => {
     if (hold) ref.current?.pause();
   }, [hold]);
@@ -145,6 +135,7 @@ function Hero({ onPlayEpisode, hold }: { onPlayEpisode: () => void; hold: boolea
     if (!v) return;
     v.muted = !v.muted;
     setMuted(v.muted);
+    setControls(true);
     if (v.paused) v.play().catch(() => undefined);
   }
 
@@ -163,17 +154,17 @@ function Hero({ onPlayEpisode, hold }: { onPlayEpisode: () => void; hold: boolea
         <div className="relative h-full aspect-[9/16] max-w-full isolate">
           <video
             ref={ref}
-            src={TRAILER_URL}
             poster={THUMBNAIL}
             muted
             playsInline
+            controls={controls}
             preload="metadata"
             onEnded={() => setEnded(true)}
-            onClick={toggleSound}
-            className="h-full w-full object-cover cursor-pointer"
-            aria-label="Leron On The Go trailer"
+            onClick={controls ? undefined : toggleSound}
+            className="h-full w-full object-contain bg-black cursor-pointer"
+            aria-label="Elevating Icons On The Go, featuring Leron Rogers, full episode"
           />
-          {!ended && (
+          {!ended && muted && (
             <button
               type="button"
               data-sound-toggle
@@ -188,12 +179,9 @@ function Hero({ onPlayEpisode, hold }: { onPlayEpisode: () => void; hold: boolea
             <div className="absolute inset-0 z-10 isolate flex flex-col items-center justify-center gap-4 p-6 text-center">
               <img src={THUMBNAIL} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover -z-10" />
               <span className="absolute inset-0 bg-black/55 -z-10" />
-              <span style={oswald} className="uppercase tracking-widest text-white text-lg">Want the whole story?</span>
-              <button type="button" onClick={onPlayEpisode} className="btn-yellow cta-episode text-sm px-6 py-3 inline-flex items-center gap-2" style={oswald}>
-                <Play size={16} fill="currentColor" /> Watch the full episode
-              </button>
-              <button type="button" onClick={replay} className="text-white/70 hover:text-white text-sm inline-flex items-center gap-1.5" style={barlow}>
-                <RotateCcw size={14} /> Replay trailer
+              <span style={oswald} className="uppercase tracking-widest text-white text-lg">Thanks for watching</span>
+              <button type="button" onClick={replay} className="btn-yellow text-sm px-6 py-3 inline-flex items-center gap-2" style={oswald}>
+                <RotateCcw size={16} /> Watch again
               </button>
             </div>
           )}
@@ -338,7 +326,6 @@ export default function Leron() {
     if (typeof window === "undefined") return null;
     return window.location.hash === "#book" ? "leron" : window.location.hash === "#hire" ? "ei" : null;
   });
-  const [episodeOpen, setEpisodeOpen] = useState(false);
   const outline =
     "text-sm px-5 py-4 min-h-[96px] flex flex-col items-center justify-center gap-2 text-center leading-snug border border-[#FFC300] text-[#FFC300] hover:bg-[#FFC300] hover:text-black transition-colors uppercase tracking-wider";
 
@@ -357,21 +344,16 @@ export default function Leron() {
           </Link>
 
           <div className="max-w-3xl mb-10">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-0.5 w-12 bg-[#FFC300]" />
-              <span style={oswald} className="text-sm font-medium tracking-[0.3em] uppercase text-[#FFC300]">
-                Elevating Icons Presents
-              </span>
-            </div>
-            <h1 style={oswald} className="text-5xl md:text-7xl font-bold uppercase leading-none text-white mb-4">
-              Leron <span className="text-[#FFC300]">On The Go</span>
+            <h1 style={oswald} className="text-5xl md:text-7xl font-bold uppercase leading-none text-white mb-5">
+              Elevating Icons
+              <span className="block text-[#FFC300] mt-2">On The Go</span>
             </h1>
-            <p style={barlow} className="text-lg text-white/70 font-light">Featuring Leron Rogers</p>
+            <p style={oswald} className="text-2xl md:text-4xl font-semibold uppercase tracking-wide text-white">Featuring Leron Rogers</p>
           </div>
 
-          <Hero onPlayEpisode={() => setEpisodeOpen(true)} hold={episodeOpen || intake !== null} />
+          <Hero hold={intake !== null} />
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
             <button
               type="button"
               onClick={() => setIntake("leron")}
@@ -388,13 +370,6 @@ export default function Leron() {
             <button type="button" onClick={() => setIntake("ei")} className={outline} style={oswald}>
               <Clapperboard size={20} className="shrink-0" />
               <span>Hire Elevating Icons</span>
-            </button>
-            <button type="button" onClick={() => setEpisodeOpen(true)} className={`${outline} cta-episode`} style={oswald}>
-              <Play size={20} fill="currentColor" className="shrink-0" />
-              <span className="inline-flex items-center gap-2">
-                Watch the full episode
-                <span className="bg-[#FFC300] text-black text-[10px] font-bold px-1.5 py-0.5 tracking-wider">12 MIN</span>
-              </span>
             </button>
           </div>
         </div>
@@ -415,18 +390,6 @@ export default function Leron() {
               <IntakeForm key={intake} kind={intake} />
             </>
           )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={episodeOpen} onOpenChange={setEpisodeOpen}>
-        <DialogContent className="max-w-md w-[calc(100%-2rem)] bg-[#0D0D0D] border-[#222] rounded-none p-4 md:p-6 text-white">
-          <DialogHeader className="text-left">
-            <DialogTitle style={oswald} className="text-2xl md:text-3xl font-bold uppercase text-white">
-              Leron <span className="text-[#FFC300]">On The Go</span>
-            </DialogTitle>
-            <DialogDescription className="sr-only">Full episode</DialogDescription>
-          </DialogHeader>
-          {episodeOpen && <EpisodePlayer src={EPISODE_URL} />}
         </DialogContent>
       </Dialog>
 
